@@ -117,3 +117,127 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = App(root)
     root.mainloop()
+import tkinter as tk
+from tkinter import messagebox
+from database import Database
+
+
+class App:
+    """GUI application for managing contacts."""
+
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title("SQLite Contact Agenda")
+
+        self.db = Database()
+
+        # ---------------------------
+        #           LISTBOX
+        # ---------------------------
+        self.contact_list = tk.Listbox(root, width=45, height=12)
+        self.contact_list.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+
+        self.load_contacts()
+
+        # ---------------------------
+        #        INPUT FIELDS
+        # ---------------------------
+        tk.Label(root, text="Name:").grid(row=1, column=0, sticky="w")
+        tk.Label(root, text="Phone:").grid(row=2, column=0, sticky="w")
+        tk.Label(root, text="Email:").grid(row=3, column=0, sticky="w")
+
+        self.name_entry = tk.Entry(root, width=30)
+        self.phone_entry = tk.Entry(root, width=30)
+        self.email_entry = tk.Entry(root, width=30)
+
+        self.name_entry.grid(row=1, column=1, pady=2)
+        self.phone_entry.grid(row=2, column=1, pady=2)
+        self.email_entry.grid(row=3, column=1, pady=2)
+
+        # ---------------------------
+        #           BUTTONS
+        # ---------------------------
+        tk.Button(root, text="Add", width=12, command=self.add_contact).grid(row=4, column=0, pady=10)
+        tk.Button(root, text="Edit", width=12, command=self.edit_contact).grid(row=4, column=1)
+        tk.Button(root, text="Delete", width=12, command=self.delete_contact).grid(row=4, column=2)
+
+    # =====================================================
+    #                    HELPERS
+    # =====================================================
+
+    def load_contacts(self) -> None:
+        """Load contacts from database into the listbox."""
+        self.contact_list.delete(0, tk.END)
+        self.contacts = self.db.get_all_contacts()
+
+        for contact_id, name, phone, email in self.contacts:
+            self.contact_list.insert(
+                tk.END, f"{name} | {phone} | {email or 'N/A'}"
+            )
+
+    def get_selected_index(self) -> int | None:
+        """Return selected listbox index or None."""
+        selection = self.contact_list.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select a contact.")
+            return None
+        return selection[0]
+
+    # --------------------------- CRUD ---------------------------
+
+    def add_contact(self) -> None:
+        """Add a new contact."""
+        name = self.name_entry.get().strip()
+        phone = self.phone_entry.get().strip()
+        email = self.email_entry.get().strip()
+
+        if not name or not phone:
+            messagebox.showwarning("Error", "Name and phone are required.")
+            return
+
+        self.db.add_contact(name, phone, email)
+        self.load_contacts()
+        self.clear_fields()
+
+    def edit_contact(self) -> None:
+        """Edit selected contact."""
+        index = self.get_selected_index()
+        if index is None:
+            return
+
+        contact_id = self.contacts[index][0]
+
+        name = self.name_entry.get().strip()
+        phone = self.phone_entry.get().strip()
+        email = self.email_entry.get().strip()
+
+        if not name or not phone:
+            messagebox.showwarning("Error", "Name and phone cannot be empty.")
+            return
+
+        self.db.update_contact(contact_id, name, phone, email)
+        self.load_contacts()
+        self.clear_fields()
+
+    def delete_contact(self) -> None:
+        """Delete selected contact."""
+        index = self.get_selected_index()
+        if index is None:
+            return
+
+        contact_id = self.contacts[index][0]
+        self.db.delete_contact(contact_id)
+        self.load_contacts()
+        self.clear_fields()
+
+    def clear_fields(self) -> None:
+        """Clear input fields."""
+        self.name_entry.delete(0, tk.END)
+        self.phone_entry.delete(0, tk.END)
+        self.email_entry.delete(0, tk.END)
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()
